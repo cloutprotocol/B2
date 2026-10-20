@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { createChart, ColorType, type IChartApi, type ISeriesApi, type UTCTimestamp } from 'lightweight-charts';
 import type { Candle } from '../api';
+import { price } from '../format';
 
 // Candles in SOL per token (TradingView's lightweight-charts), coloured from the page's own tokens.
 
@@ -20,7 +21,8 @@ export function Chart({ candles }: { candles: Candle[] }) {
       grid: { vertLines: { color: css('--faint') }, horzLines: { color: css('--faint') } },
       rightPriceScale: { borderColor: css('--rule') },
       timeScale: { borderColor: css('--rule'), timeVisible: true },
-      localization: { priceFormatter: (p: number) => (p < 0.001 ? p.toExponential(3) : p.toFixed(6)) },
+      // prices as the rest of the app writes them: 0.0₆2320, not 2.320e-7
+      localization: { priceFormatter: (p: number) => price(p) },
     });
     series.current = c.addCandlestickSeries({
       upColor: css('--up'),
@@ -30,7 +32,7 @@ export function Chart({ candles }: { candles: Candle[] }) {
       wickDownColor: css('--down'),
       priceFormat: { type: 'price', precision: 12, minMove: 1e-12 },
     });
-    volume.current = c.addHistogramSeries({ priceScaleId: '', priceFormat: { type: 'volume' }, color: css('--rule') });
+    volume.current = c.addHistogramSeries({ priceScaleId: '', priceFormat: { type: 'volume' }, color: css('--rule'), lastValueVisible: false, priceLineVisible: false });
     volume.current.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
     chart.current = c;
     return () => c.remove();

@@ -27,11 +27,11 @@ export function TokenPage() {
     <div>
       <div className="token-head">
         <TokenIcon src={t.image} symbol={t.symbol} size={56} />
-        <div>
+        <div className="th-title">
           <h1>
             {t.name} <span className="muted" style={{ fontWeight: 500 }}>{t.symbol}</span>
           </h1>
-          <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+          <div className="th-chips" style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
             <span className="chip mono" title={t.mint} onClick={() => navigator.clipboard?.writeText(t.mint)} style={{ cursor: 'copy' }}>
               {short(t.mint)} ⧉
             </span>
@@ -57,13 +57,13 @@ export function TokenPage() {
             </a>
           </div>
         </div>
-        <div style={{ flex: 1 }} />
-        <Link to={`/machine/${t.mint}`} className="btn primary">
+        <div className="th-spacer" style={{ flex: 1 }} />
+        <Link to={`/machine/${t.mint}`} className="btn primary th-link">
           Machine view →
         </Link>
       </div>
 
-      <div className="stats" style={{ marginBottom: 22 }}>
+      <div className="stats token-stats" style={{ marginBottom: 22 }}>
         <div className="stat">
           <span className="label">Price</span>
           <span className="v mono">{price(t.priceSol)}</span>
@@ -97,45 +97,11 @@ export function TokenPage() {
       </div>
 
       <div className="token-grid">
-        <div>
+        <div className="tk-main">
           <div className="chart-box">
             {candles.length ? <Chart candles={candles} /> : <div className="chart-empty note">No candles for this pool yet.</div>}
           </div>
 
-          <div className="label section-title">Latest trades</div>
-          <div className="table-wrap">
-            <table className="grid">
-              <thead>
-                <tr>
-                  <th className="l">Side</th>
-                  <th>SOL</th>
-                  <th>{t.symbol}</th>
-                  <th>Price</th>
-                  <th className="l">Trader</th>
-                  <th>Age</th>
-                </tr>
-              </thead>
-              <tbody>
-                {trades.slice(0, 30).map((x) => (
-                  <tr key={x.signature} className="row" onClick={() => window.open(`https://solscan.io/tx/${x.signature}`, '_blank')}>
-                    <td className={`l mono ${x.side === 'buy' ? 'up' : 'down'}`}>{x.side}</td>
-                    <td className="mono">{compact(Number(x.quoteAmount) / 1e9, 3)}</td>
-                    <td className="mono">{compact(Number(x.baseAmount) / 10 ** t.decimals)}</td>
-                    <td className="mono">{price(x.priceQuote)}</td>
-                    <td className="l mono muted">{short(x.trader)}</td>
-                    <td className="mono muted">{age(x.ts)}</td>
-                  </tr>
-                ))}
-                {trades.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="l muted">
-                      No trades from the indexer for this token.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
         </div>
 
         <div className="side">
@@ -174,6 +140,44 @@ export function TokenPage() {
                 <span className="mono">{sol(p.liquiditySol, 1)}</span>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* on a phone these come after the trade card; on a desktop, under the chart */}
+        <div className="tk-trades">
+          <div className="label section-title">Latest trades</div>
+          <div className="table-wrap">
+            <table className="grid trades">
+              <thead>
+                <tr>
+                  <th className="l">Side</th>
+                  <th>SOL</th>
+                  <th>{t.symbol}</th>
+                  <th>Price</th>
+                  <th className="l">Trader</th>
+                  <th>Age</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trades.slice(0, 30).map((x) => (
+                  <tr key={x.signature} className="row" onClick={() => window.open(`https://solscan.io/tx/${x.signature}`, '_blank')}>
+                    <td className={`l mono ${x.side === 'buy' ? 'up' : 'down'}`}>{x.side}</td>
+                    <td className="mono">{compact(Number(x.quoteAmount) / 1e9, 3)}</td>
+                    <td className="mono">{compact(Number(x.baseAmount) / 10 ** t.decimals)}</td>
+                    <td className="mono">{price(x.priceQuote)}</td>
+                    <td className="l mono muted">{short(x.trader)}</td>
+                    <td className="mono muted">{age(x.ts)}</td>
+                  </tr>
+                ))}
+                {trades.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="l muted">
+                      No trades from the indexer for this token.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
