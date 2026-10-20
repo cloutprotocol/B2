@@ -319,3 +319,10 @@ table.grid tr.row:hover td { background: var(--faint); cursor: pointer; }
   table.grid.pools th:nth-child(n + 9), table.grid.pools td:nth-child(n + 9) { display: none; }
 }
 
+
+/* the swap page's most traded: a row opens the token, its Swap button loads it into the card */
+.mover { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--faint); cursor: pointer; transition: background 0.12s ease; }
+.mover:last-child { border-bottom: none; }
+.mover:hover, .mover:focus-visible { background: var(--faint); outline: none; }
+.mover-swap { flex: none; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line-2); background: transparent; color: var(--ink-2); font: 500 12px var(--sans); cursor: pointer; }
+.mover-swap:hover { background: var(--ink); color: #0b0c0e; border-color: var(--ink); }
