@@ -77,7 +77,7 @@ function layoutFor(tall: boolean, legendItems: number): Layout {
   }
   // under the legend (three to a row), the bus, the takers, the companion and the pool
   const k = 1.24;
-  const LEGEND_Y = 626;
+  const LEGEND_Y = 594;
   const BUS = LEGEND_Y + (Math.ceil(legendItems / 3) - 1) * 34 * k + 40;
   const TAKER_Y = BUS + 26;
   const COMP: Box = { x: 20, y: TAKER_Y + 122 + 32, w: 520, h: 440 };
@@ -87,16 +87,16 @@ function layoutFor(tall: boolean, legendItems: number): Layout {
     k,
     W: 560,
     H: POOL.y + POOL.h + 36,
-    CH: { x0: 76, x1: 540, y0: 128, y1: 470 },
+    CH: { x0: 76, x1: 540, y0: 96, y1: 438 },
     RIGHT: { x0: 20, x1: 540 },
     BUS,
-    LOW_BUS: 520,
+    LOW_BUS: 488,
     SIDE_X: 8,
     TAKER_Y,
     TAKER_H: 122,
     COMP,
     POOL,
-    BOND_Y: 568,
+    BOND_Y: 536,
     LEGEND_Y,
     LEGEND_COLS: 3,
     STAT_COLS: 2,
@@ -564,24 +564,24 @@ export function MachinePage() {
     <div>
       <div className="machine-hero">
         <TokenIcon src={t.image} symbol={t.symbol} size={56} />
-        <div>
+        <div className="mh-title">
           <h1>
             {t.name} <span className="muted" style={{ fontWeight: 500 }}>machine</span>
           </h1>
-          <div className="note" style={{ paddingLeft: 0 }}>
+          <div className="note mh-note" style={{ paddingLeft: 0 }}>
             <span className="pulse" />
             {error ? 'Reconnecting to chain… showing the last reading' : 'Live from chain'} · {t.symbol} · {lm ? (graduated ? 'graduated' : `curve ${(progress * 100).toFixed(1)}%`) : 'pool'}
             {b2?.script ? ` · ${b2.script.steps} B² steps, last ${age(b2.script.lastStepAt)} ago (${b2.script.lastAction})` : ''}
           </div>
         </div>
-        <div style={{ flex: 1 }} />
-        <Link to={`/token/${t.mint}`} className="btn">
+        <div className="mh-spacer" style={{ flex: 1 }} />
+        <Link to={`/token/${t.mint}`} className="btn mh-link">
           Token page
         </Link>
       </div>
 
       <div className="machine-grid">
-        <div ref={box}>
+        <div ref={box} className="mh-main">
           <svg className="machine-svg" viewBox={`0 0 ${L.W} ${L.H}`}>
             <style>{`.t-mono{font-family:var(--mono)} .t-display{font-family:var(--display);font-weight:700;letter-spacing:-0.01em} text{font-family:var(--sans)}`}</style>
             <defs>
@@ -912,35 +912,6 @@ export function MachinePage() {
             })}
           </svg>
 
-          {steps.length ? (
-            <>
-              <div className="label section-title">Latest B² steps</div>
-              <div className="table-wrap">
-                <table className="grid">
-                  <thead>
-                    <tr>
-                      <th className="l">Action</th>
-                      <th>SOL spent</th>
-                      <th>Got</th>
-                      <th>Pot before</th>
-                      <th>Age</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {steps.slice(0, 12).map((s) => (
-                      <tr key={s.signature} className="row" onClick={() => window.open(`https://solscan.io/tx/${s.signature}`, '_blank')}>
-                        <td className="l mono">{s.action}</td>
-                        <td className="mono">{s.sol ? sol(s.sol, 4) : '—'}</td>
-                        <td className="mono">{s.amount ? compact(s.amount) : '—'}</td>
-                        <td className="mono">{sol(s.pot, 3)}</td>
-                        <td className="mono muted">{age(s.at)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : null}
         </div>
 
         <div className="side">
@@ -984,6 +955,39 @@ export function MachinePage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* on a phone these come after the trade card; on a desktop, under the drawing */}
+        <div className="mh-steps">
+          {steps.length ? (
+            <>
+              <div className="label section-title">Latest B² steps</div>
+              <div className="table-wrap">
+                <table className="grid">
+                  <thead>
+                    <tr>
+                      <th className="l">Action</th>
+                      <th>SOL spent</th>
+                      <th>Got</th>
+                      <th>Pot before</th>
+                      <th>Age</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {steps.slice(0, 12).map((s) => (
+                      <tr key={s.signature} className="row" onClick={() => window.open(`https://solscan.io/tx/${s.signature}`, '_blank')}>
+                        <td className="l mono">{s.action}</td>
+                        <td className="mono">{s.sol ? sol(s.sol, 4) : '—'}</td>
+                        <td className="mono">{s.amount ? compact(s.amount) : '—'}</td>
+                        <td className="mono">{sol(s.pot, 3)}</td>
+                        <td className="mono muted">{age(s.at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
     </div>
