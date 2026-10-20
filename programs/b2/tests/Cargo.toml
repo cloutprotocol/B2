@@ -1,0 +1,27 @@
+[package]
+name = "bordr-pair-tests"
+description = "LiteSVM tests of BORDR Pair (hook/ and script/) on the Bordrless programs dumped from mainnet into fixtures/."
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Host-only: no cdylib target, so cargo build-sbf never builds this crate.
+[dependencies]
+anchor-lang = "=1.2.0"
+my-hook = { path = "../hook", features = ["no-entrypoint"] }
+workshop-script = { path = "../script", features = ["no-entrypoint"] }
+bordrless-hook = { git = "https://github.com/BordrlessDex/bordrless-programs", rev = "faa446e56b544b411721648f3b79b70ba4a00355" }
+bordrless-core = { git = "https://github.com/BordrlessDex/bordrless-programs", rev = "faa446e56b544b411721648f3b79b70ba4a00355" }
+bordrless-token = { git = "https://github.com/BordrlessDex/bordrless-programs", rev = "faa446e56b544b411721648f3b79b70ba4a00355", features = ["no-entrypoint"] }
+bordrless-swap = { git = "https://github.com/BordrlessDex/bordrless-programs", rev = "faa446e56b544b411721648f3b79b70ba4a00355", features = ["no-entrypoint"] }
+bordrless-launch = { git = "https://github.com/BordrlessDex/bordrless-programs", rev = "faa446e56b544b411721648f3b79b70ba4a00355", features = ["no-entrypoint"] }
+bordrless-bridge = { git = "https://github.com/BordrlessDex/bordrless-programs", rev = "faa446e56b544b411721648f3b79b70ba4a00355", features = ["no-entrypoint"] }
+bordrless-companion = { git = "https://github.com/BordrlessDex/bordrless-programs", rev = "faa446e56b544b411721648f3b79b70ba4a00355", features = ["no-entrypoint"] }
+bordrless-program-tests = { git = "https://github.com/BordrlessDex/bordrless-programs", rev = "faa446e56b544b411721648f3b79b70ba4a00355" }
+litesvm = "=0.17.0"
+solana-account = "=4.7.0"
+solana-keypair = "=3.1.2"
+solana-signer = "=3.0.1"
+solana-message = "=4.6.0"
+solana-transaction = "=4.3.0"
+solana-rent = "=4.4.0"

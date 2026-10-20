@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "holdings": {
+    "minBalance": "1",
+    "maxBalance": null,
+    "hookData": null,
+    "payTo": "none",
+    "perStep": { "withSwapAccounts": 1 }
+  },
+  "swapAccounts": true,
+  "payouts": false,
+  "stepSecs": 60,
+  "stateLen": 307,
+  "launcherShareBps": 4000,
+  "pools": [
+    { "base": "coin", "quote": "APpT4aqDoXAVz6S9wVWCJdqayFcs4tvfj5jToffVncwv", "feeBps": 100, "liquidity": true },
+    { "base": "APpT4aqDoXAVz6S9wVWCJdqayFcs4tvfj5jToffVncwv", "quote": "sol", "feeBps": 30 }
+  ]
+}

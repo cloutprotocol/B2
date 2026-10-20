@@ -1,0 +1,19 @@
+{
+  "name": "@b2/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@bordrless/sdk": "0.14.0",
+    "@bordrless/shared": "0.14.0",
+    "@solana/web3.js": "1.98.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

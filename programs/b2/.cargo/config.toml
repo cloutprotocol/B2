@@ -1,0 +1,4 @@
+# The Bordrless programs the tests load (bordrless-program-tests reads SBF_OUT_DIR): the fresh
+# mainnet dumps in fixtures/, never bordrless/sbf/ (whose .cargo/config.toml this overrides).
+[env]
+SBF_OUT_DIR = { value = "fixtures", relative = true, force = true }

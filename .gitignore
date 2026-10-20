@@ -1,0 +1,11 @@
+node_modules/
+dist/
+target/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+# Program keypairs never go in the repo (see programs/b2/README.md).
+programs/b2/keys/
+apps/indexer/data/
