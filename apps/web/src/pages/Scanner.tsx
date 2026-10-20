@@ -77,7 +77,7 @@ function TokensTable({ rows, solUsd }: { rows: Token[]; solUsd: number | null })
   );
   return (
     <div className="table-wrap">
-      <table className="grid">
+      <table className="grid tokens">
         <thead>
           <tr>
             <th className="l">#</th>
@@ -178,7 +178,7 @@ function PoolsTable({ tokens }: { tokens: Token[] }) {
   const pools = [...(data?.pools ?? [])].sort((a, b) => (b.liquiditySol ?? 0) - (a.liquiditySol ?? 0));
   return (
     <div className="table-wrap">
-      <table className="grid">
+      <table className="grid pools">
         <thead>
           <tr>
             <th className="l">Pool</th>
@@ -247,32 +247,37 @@ export function ScannerPage() {
 
   return (
     <div>
-      <div className="stats">
-        <div className="stat">
+      {/* the market at a glance: four figures, each with its context */}
+      <div className="hero-stats">
+        <div className="hstat">
           <span className="label">Tokens</span>
           <span className="v">{overview?.tokens ?? '—'}</span>
+          {overview && overview.tokens ? (
+            <>
+              <span className="split" aria-hidden>
+                <i style={{ width: `${(overview.onCurve / overview.tokens) * 100}%` }} />
+                <i className="g" style={{ width: `${(overview.graduated / overview.tokens) * 100}%` }} />
+              </span>
+              <span className="sub">
+                <b>{overview.onCurve}</b> on curve · <b className="g">{overview.graduated}</b> graduated
+              </span>
+            </>
+          ) : null}
         </div>
-        <div className="stat">
-          <span className="label">Pools</span>
-          <span className="v">{overview?.pools ?? '—'}</span>
-        </div>
-        <div className="stat">
-          <span className="label">On curve · graduated</span>
-          <span className="v">
-            {overview ? `${overview.onCurve} · ${overview.graduated}` : '—'}
-          </span>
-        </div>
-        <div className="stat">
+        <div className="hstat">
           <span className="label">Liquidity</span>
-          <span className="v">{sol(overview?.liquiditySol, 0)}</span>
+          <span className="v">{overview ? `${compact(overview.liquiditySol, overview.liquiditySol >= 1000 ? 2 : 0)} SOL` : '—'}</span>
+          <span className="sub">{overview && solUsd ? `${usd(overview.liquiditySol * solUsd)} across every pool` : 'across every pool'}</span>
         </div>
-        <div className="stat">
+        <div className="hstat">
           <span className="label">Volume 24h</span>
           <span className="v">{usd(overview?.volume24hUsd)}</span>
+          <span className="sub">{overview && solUsd ? `≈ ${compact(overview.volume24hUsd / solUsd, 0)} SOL traded` : 'traded on the DEX'}</span>
         </div>
-        <div className="stat">
+        <div className="hstat">
           <span className="label">SOL</span>
-          <span className="v">{usd(solUsd)}</span>
+          <span className="v">{solUsd ? `$${solUsd.toFixed(2)}` : '—'}</span>
+          <span className="sub">{overview ? `${overview.pools} pools on Bordrless` : 'Solana mainnet'}</span>
         </div>
       </div>
 
@@ -287,15 +292,15 @@ export function ScannerPage() {
         </div>
         {view === 'tokens' ? (
           <>
-            <div className="tabs">
+            <div className="tabs filters">
               {FILTERS.map(([f, label]) => (
                 <button key={f} className={filter === f ? 'on' : ''} onClick={() => setFilter(f)}>
                   {label}
                 </button>
               ))}
             </div>
-            <input placeholder="Search symbol, name or mint" value={q} onChange={(e) => setQ(e.target.value)} />
-            <span className="label">{rows.length} shown</span>
+            <input className="search" placeholder="Search symbol, name or mint" value={q} onChange={(e) => setQ(e.target.value)} />
+            <span className="label count">{rows.length} shown</span>
           </>
         ) : null}
       </div>

@@ -136,7 +136,7 @@ h1, h2, .display { font-family: var(--display); font-weight: 700; letter-spacing
 .scan-tools input { border: 1px solid var(--line-2); border-radius: 999px; padding: 8px 14px; background: var(--card); min-width: 260px; outline: none; }
 .scan-tools input:focus { border-color: var(--spot); }
 .tabs { display: flex; gap: 2px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
-.tabs button { border: none; background: transparent; padding: 6px 12px; font-size: 12.5px; font-weight: 500; color: var(--muted); border-radius: 999px; }
+.tabs button { border: none; background: transparent; padding: 6px 12px; font-size: 12.5px; font-weight: 500; color: var(--muted); border-radius: 999px; white-space: nowrap; flex: none; }
 .tabs button:hover { color: var(--ink); }
 .tabs button.on { background: var(--raise); color: var(--ink); box-shadow: 0 0 0 1px var(--line-2) inset; }
 .table-wrap { border: 1px solid var(--line); border-radius: var(--r); overflow: auto; background: var(--card); }
@@ -178,8 +178,9 @@ table.grid tr.row:hover td { background: var(--faint); cursor: pointer; }
   .ticker { display: none; }
 }
 @media (max-width: 1100px) {
-  .token-grid, .machine-grid { grid-template-columns: 1fr; }
+  .token-grid, .machine-grid { grid-template-columns: minmax(0, 1fr); }
 }
+.token-grid > *, .machine-grid > * { min-width: 0; }
 @media (max-width: 980px) {
   .top { flex-wrap: wrap; gap: 12px; padding: 12px 16px; }
   .ticker { display: none; }
@@ -253,3 +254,54 @@ table.grid tr.row:hover td { background: var(--faint); cursor: pointer; }
 .state-link:hover { color: var(--ink); background: var(--raise); }
 .state-spin { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid rgba(170, 182, 255, 0.22); border-top-color: #aab6ff; animation: wk-turn 0.8s linear infinite; }
 .state-spin.is-sm { width: 14px; height: 14px; border-width: 2px; border-color: rgba(11, 12, 14, 0.25); border-top-color: #0b0c0e; }
+
+/* ---- Scanner: the market at a glance ---------------------------------------------------------- */
+.hero-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.hstat { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 16px 18px 15px; border-radius: 14px; border: 1px solid var(--line); background: radial-gradient(120% 90% at 0% 0%, rgba(59, 85, 255, 0.08), transparent 55%), linear-gradient(180deg, var(--card-2), var(--card)); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset; overflow: hidden; }
+.hstat .v { font: 700 28px var(--display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.05; }
+.hstat .sub { font-size: 12.5px; color: var(--muted); }
+.hstat .sub b { color: #aab6ff; font-weight: 600; }
+.hstat .sub b.g { color: var(--up); }
+.hstat .split { display: flex; gap: 2px; height: 5px; border-radius: 99px; overflow: hidden; background: var(--faint); }
+.hstat .split i { background: linear-gradient(90deg, var(--spot), #8a9bff); }
+.hstat .split i.g { background: var(--up); }
+
+/* ---- Phones ------------------------------------------------------------------------------------ */
+@media (max-width: 640px) {
+  main { padding: 14px 12px 24px; }
+  /* the header: the mark and the wallet on one row, the three pages full width under them */
+  .top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 12px; padding: 10px 12px; }
+  .top .brand { order: 1; min-width: 0; }
+  .top > .wk-connect, .top > .wk-account { order: 2; justify-self: end; }
+  .top .nav { order: 3; grid-column: 1 / -1; width: 100%; }
+  .top .nav a { flex: 1; text-align: center; padding: 8px 6px; }
+  .top .spacer { display: none; }
+  .brand small { font-size: 9px; padding-left: 10px; }
+  .wk-connect { height: 36px; font-size: 13px; }
+
+  /* the scanner */
+  .hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .hstat { padding: 12px 12px 11px; gap: 5px; border-radius: 12px; }
+  .hstat .v { font-size: 21px; }
+  .hstat .sub { font-size: 11px; line-height: 1.35; }
+  .scan-tools { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; margin: 16px 0 10px; }
+  .scan-tools .count { justify-self: end; }
+  .scan-tools .filters { grid-column: 1 / -1; order: 3; overflow-x: auto; scrollbar-width: none; mask-image: linear-gradient(90deg, #000 88%, transparent); -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); }
+  .scan-tools .filters::-webkit-scrollbar { display: none; }
+  .scan-tools .search { grid-column: 1 / -1; order: 4; min-width: 0; width: 100%; padding: 10px 14px; font-size: 16px; }
+  table.grid { font-size: 13px; }
+  table.grid th, table.grid td { padding: 10px 8px; }
+  /* tokens: the token, its 24 h move and its market cap; the rest is on wider screens */
+  table.grid.tokens th:nth-child(1), table.grid.tokens td:nth-child(1),
+  table.grid.tokens th:nth-child(3), table.grid.tokens td:nth-child(3),
+  table.grid.tokens th:nth-child(5), table.grid.tokens td:nth-child(5),
+  table.grid.tokens th:nth-child(n + 7), table.grid.tokens td:nth-child(n + 7) { display: none; }
+  table.grid.tokens td:nth-child(2) { max-width: 52vw; }
+  table.grid.tokens .tok { gap: 8px; }
+  table.grid.tokens .tok .n { max-width: 34vw; }
+  table.grid.tokens .chip { font-size: 9.5px; padding: 1px 6px; }
+  /* pools: the pool, its liquidity and its volume */
+  table.grid.pools th:nth-child(n + 2):nth-child(-n + 6), table.grid.pools td:nth-child(n + 2):nth-child(-n + 6),
+  table.grid.pools th:nth-child(n + 9), table.grid.pools td:nth-child(n + 9) { display: none; }
+}
+
