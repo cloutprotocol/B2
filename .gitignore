@@ -9,3 +9,4 @@ target/
 # Program keypairs never go in the repo (see programs/b2/README.md).
 programs/b2/keys/
 apps/indexer/data/
+.vercel/

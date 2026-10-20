@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Transaction, VersionedTransaction } from '@solana/web3.js';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { useConnectModal } from './WalletKit';
 import { SOL_MINT, getJson, postJson, type Token } from '../api';
 import { compact, price, toUnits, whole } from '../format';
 import { useMarket } from '../market';
@@ -48,7 +48,7 @@ export function SwapCard({
   const { tokens, solUsd } = useMarket();
   const { connection } = useConnection();
   const wallet = useWallet();
-  const modal = useWalletModal();
+  const modal = useConnectModal();
 
   const [inMint, setInMint] = useState(SOL_MINT);
   const [outMint, setOutMint] = useState(initialMint ?? '');
@@ -283,7 +283,7 @@ export function SwapCard({
       ) : null}
       {quoteErr ? <div className="note err">{quoteErr}</div> : null}
 
-      <button className="cta" disabled={ctaDisabled} onClick={() => (wallet.connected ? swap() : modal.setVisible(true))}>
+      <button className="cta" disabled={ctaDisabled} onClick={() => (wallet.connected ? swap() : modal.open())}>
         {cta}
       </button>
       {status.kind === 'error' ? <div className="note err">{status.text}</div> : null}

@@ -1,7 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { NavLink, Route, Routes } from 'react-router-dom';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
-import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { MarketProvider, useMarket } from './market';
 import { compact, usd } from './format';
 import { SwapPage } from './pages/Swap';
@@ -10,6 +9,7 @@ import { TokenPage } from './pages/Token';
 import { MachinePage } from './pages/Machine';
 import { B2_COIN } from './api';
 import { Logo } from './components/Logo';
+import { ConnectButton, WalletKitProvider } from './components/WalletKit';
 
 // The shell: wallet and market providers, the nav and the routes.
 
@@ -37,10 +37,12 @@ function Ticker() {
 export function App() {
   // The browser's RPC goes through the indexer, which holds the key and allows only what a swap needs.
   const endpoint = useMemo(() => `${window.location.origin}/rpc`, []);
+  // the wallet's errors go to the connect modal, which says them in words
+  const onWalletError = useRef<((e: Error) => void) | null>(null);
   return (
     <ConnectionProvider endpoint={endpoint} config={{ commitment: 'confirmed' }}>
-      <WalletProvider wallets={[]} autoConnect>
-        <WalletModalProvider>
+      <WalletProvider wallets={[]} autoConnect onError={(e) => onWalletError.current?.(e)}>
+        <WalletKitProvider errorRef={onWalletError}>
           <MarketProvider>
             <div className="shell">
               <header className="top">
@@ -57,7 +59,7 @@ export function App() {
                 </nav>
                 <div className="spacer" />
                 <Ticker />
-                <WalletMultiButton />
+                <ConnectButton />
               </header>
               <main>
                 <Routes>
@@ -73,7 +75,7 @@ export function App() {
               </footer>
             </div>
           </MarketProvider>
-        </WalletModalProvider>
+        </WalletKitProvider>
       </WalletProvider>
     </ConnectionProvider>
   );

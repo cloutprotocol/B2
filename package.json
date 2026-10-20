@@ -10,9 +10,11 @@
     "dev": "node scripts/dev.mjs",
     "build": "npm run build -w @b2/web",
     "typecheck": "npm run typecheck -w @b2/indexer && npm run typecheck -w @b2/web",
-    "postinstall": "node scripts/fix-bordrless-packages.mjs"
+    "postinstall": "node scripts/fix-bordrless-packages.mjs",
+    "vercel-build": "node scripts/vercel-build.mjs"
   },
   "engines": {
     "node": ">=22"
-  }
+  },
+  "license": "MIT"
 }
