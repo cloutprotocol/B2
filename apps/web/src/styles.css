@@ -64,6 +64,9 @@ input { font: inherit; color: inherit; }
 .ticker b { color: var(--ink-2); font-weight: 500; }
 main { flex: 1; padding: 28px; width: 100%; max-width: 1480px; margin: 0 auto; }
 .foot { padding: 18px 28px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 11px; color: var(--soft); display: flex; gap: 16px; flex-wrap: wrap; }
+/* the repo, in the footer's bottom-right corner */
+.foot-gh { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); text-decoration: none; }
+.foot-gh:hover { color: var(--ink); }
 
 /* Wallet button in the house style. */
   background: var(--ink) !important; color: #0b0c0e !important; font-weight: 600 !important; }

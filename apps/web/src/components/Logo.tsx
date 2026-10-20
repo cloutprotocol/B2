@@ -1,6 +1,6 @@
-// The B² mark: the spinning cube from the film beside a cut wordmark: a heavy geometric B drawn as
-// paths (no font to wait for), sliced on the diagonal with its lower half slipped along the cut, a
-// spot-blue hairline in the cut, and the ² set in a block.
+// The B² mark: a cut wordmark, a heavy geometric B drawn as paths (no font to wait for), sliced on the
+// diagonal with its lower half slipped along the cut, a spot-blue hairline in the cut, and the ² set in
+// a block. The spinning cube from the film appears once per screen: on Connect and in the wallet box.
 
 export function Cube({ size = 36, big }: { size?: number; big?: boolean }) {
   return <img src={big ? '/b2-cube.gif' : '/b2-cube-160.gif'} width={size} height={size} alt="" className="cube" />;
@@ -38,8 +38,7 @@ export function Wordmark({ height = 30 }: { height?: number }) {
 export function Logo() {
   return (
     <span className="logo">
-      <Cube size={38} />
-      <Wordmark height={26} />
+      <Wordmark height={28} />
     </span>
   );
 }

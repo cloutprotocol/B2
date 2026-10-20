@@ -7,7 +7,7 @@ Please report vulnerabilities privately through GitHub's
 public issue.
 
 Include:
-- what is affected (the program, the indexer or the web app);
+- what is affected (the swap's routing and transaction building, the indexer, the web app, or the B² pair);
 - how to reproduce it;
 - the impact you expect.
 
@@ -16,9 +16,10 @@ We'll acknowledge the report, work on a fix, and credit you if you'd like.
 ## Scope
 
 - **In scope:**
-  - `programs/b2`, the hook and companion script;
+  - the swap: routing, quotes and the transactions `packages/core` builds;
   - the indexer's API and its RPC proxy;
-  - the web app's transaction building and wallet flow.
+  - the web app's wallet flow;
+  - `programs/b2`, the B² hook and companion script.
 - **Out of scope:** the Bordrless programs themselves (report those to Bordrless), third-party wallets, and RPC
   providers.
 

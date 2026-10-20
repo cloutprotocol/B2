@@ -4,7 +4,6 @@ import { usePoll, type MachineData, type Trade } from '../api';
 import { age, compact, short, sol } from '../format';
 import { SwapCard, type Swapped } from '../components/SwapCard';
 import { TokenIcon } from '../components/TokenIcon';
-import { Cube } from '../components/Logo';
 
 // The machine view, live, for any token: its latest trades on the chart, and every trade's money
 // running to where the coin's rules send it (the hook, the creator fee, holders, the burn, its
@@ -558,7 +557,7 @@ export function MachinePage() {
   return (
     <div>
       <div className="machine-hero">
-        {t.b2 ? <Cube size={64} big /> : <TokenIcon src={t.image} symbol={t.symbol} size={56} />}
+        <TokenIcon src={t.image} symbol={t.symbol} size={56} />
         <div>
           <h1>
             {t.name} <span className="muted" style={{ fontWeight: 500 }}>machine</span>

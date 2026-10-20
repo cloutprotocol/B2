@@ -4,23 +4,24 @@
 
 # B²
 
-**A Bordrless Workshop pair that turns every trade into BORDR liquidity, and the open-source app around it:
-a swap for the whole Bordrless ecosystem, a market scanner, and a live machine view of every coin's rules.**
+**The swap for the whole Bordrless ecosystem. Any token to any token, routed across every pool and built
+with the Bordrless SDK, with a market scanner and a live machine view of every coin beside it. B², our
+Workshop pair that turns trades into BORDR liquidity, is part of it.**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-3b55ff.svg)](LICENSE)
-[![Solana mainnet](https://img.shields.io/badge/Solana-mainnet-14f195.svg)](https://solscan.io/account/5HZP9Nn6ScGzduvsadvDEUuZnz5Xz7yynzxuxPRHmnre)
-[![Bordrless Workshop](https://img.shields.io/badge/Bordrless-Workshop%20pair-8a9bff.svg)](https://bordrless.app)
-[![Anchor 1.2](https://img.shields.io/badge/Anchor-1.2-eef0f2.svg)](programs/b2)
+[![Solana mainnet](https://img.shields.io/badge/Solana-mainnet-14f195.svg)](https://bordrless.app)
+[![Bordrless DEX](https://img.shields.io/badge/Bordrless-DEX%20and%20router-8a9bff.svg)](packages/core/src/route.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178c6.svg)](packages/core)
 [![Node 22+](https://img.shields.io/badge/node-%E2%89%A522-46c27a.svg)](package.json)
+[![Anchor 1.2](https://img.shields.io/badge/Anchor-1.2-eef0f2.svg)](programs/b2)
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcloutprotocol%2FB2&env=B2_RPC&envDescription=A%20Solana%20mainnet%20RPC%20URL%20that%20serves%20getProgramAccounts&project-name=b2)
 
 <br />
 
-<img src="docs/media/machine.png" alt="The B² machine view: live trades on the chart flowing into the hook, the creator fee and the companion's pot" width="100%" />
+<img src="docs/media/swap.png" alt="The B² swap: 1 SOL quoted into a Bordrless coin, with the route, every fee on the way, price impact and the minimum received" width="100%" />
 
-<sub>The machine view: every trade's money, live from chain, running to where the coin's rules send it.</sub>
+<sub>Every quote shows its route, each fee on the way (a coin's hook included), price impact and the minimum received.</sub>
 
 </div>
 
@@ -28,75 +29,77 @@ a swap for the whole Bordrless ecosystem, a market scanner, and a live machine v
 
 ## Contents
 
-- [What B² is](#what-b-is)
-- [How the pair works](#how-the-pair-works)
+- [What it is](#what-it-is)
+- [How swaps work](#how-swaps-work)
 - [The app](#the-app)
 - [Architecture](#architecture)
 - [Quick start](#quick-start)
 - [Configuration](#configuration)
 - [Deploy](#deploy)
 - [How it reads the chain](#how-it-reads-the-chain)
-- [Swaps](#swaps)
-- [The program](#the-program)
+- [The B² pair](#the-b-pair)
 - [Project layout](#project-layout)
 - [Security model](#security-model)
 - [Contributing](#contributing)
 - [License](#license)
 
-## What B² is
+## What it is
 
-[Bordrless](https://bordrless.app) is a Solana launchpad and DEX where a coin can carry a **hook** (rules that run on
-every trade) and a **companion script** (a program that acts for the coin on a schedule). Together they make a
-Workshop **pair**.
-
-B² is such a pair. It takes a 1% SOL cut on every curve trade, buys the coin with it under a price guard, and at
-graduation seeds two pools with the LP locked inside the launch: coin/SOL and coin/wBORDR. Every B² coin that
-graduates adds permanent BORDR liquidity.
-
-This repository holds the pair itself and everything we built around it, all of it open source:
+[Bordrless](https://bordrless.app) is a Solana launchpad and DEX with its own token standard, where a coin can carry a
+**hook** (rules that run on every trade) and a **companion script** (a program that acts for the coin on a schedule).
+Bordrless ships a launchpad; this is the trading layer for everything on it:
 
 | | |
 | --- | --- |
-| **The pair** | the hook and companion script, as submitted to the Workshop and deployed on mainnet, with LiteSVM tests against the real Bordrless programs |
-| **The indexer** | a server that reads the whole Bordrless market from chain, enriches it, prepares swaps and proxies wallet RPC |
-| **The app** | Swap, Scanner, token pages and the Machine view, for any Bordrless coin, not only B² |
+| **The swap** | any Bordrless token to any other: every curve and pool, one hop through a shared token when no pool joins the two, hooks and wrapping resolved, and an optional integrator fee through Bordrless's router |
+| **The scanner** | every token and pool on the DEX, read from chain: price, market cap, liquidity, volume, holders, curve progress |
+| **The machine view** | any coin's rules drawn live: where each trade's money goes, with a trade box to watch your own run through it |
+| **The B² pair** | our Workshop hook and companion: a 1% SOL cut on every curve trade that buys the coin and, at graduation, seeds coin/SOL and coin/wBORDR with the LP locked |
+| **The indexer** | the server behind it all: reads the market, prepares swaps and proxies wallet RPC so the RPC key stays server-side |
 
-## How the pair works
+## How swaps work
 
-```mermaid
-flowchart LR
-    T[Every curve trade] -->|1% SOL cut| H[B² hook]
-    H --> P[(Pot)]
-    P -->|every 60 s, under the +3% guard| B[Companion buys the coin]
-    B --> C[(Held coin)]
-    D{Price over 15% under<br/>its 6 h reference?} -.->|buys pay 0%, sells 3%| H
-    P & C -->|at graduation| G[coin/SOL and coin/wBORDR<br/>LP locked in the launch]
-```
+Any token to any token (`packages/core/src/route.ts`, served as `/api/route/quote` and `/api/route/prepare`):
 
-- **The cut.** The hook takes 1% of every curve trade, in SOL, into the companion's pot.
-- **The buy.** Every 60 seconds the companion steps. Before graduation it buys and holds the coin, dips first, and
-  only while the price is under its one-hour reference plus 3%, so it never chases a pump. At most half the pot
-  goes on buys.
-- **Dip Buy.** When the price falls more than 15% under its six-hour reference, buyers pay no hook fee and sellers
-  pay 3%, which leans the curve toward recovery.
-- **Graduation.** The pot and the held coin seed coin/SOL and coin/wBORDR, with the LP locked in the launch for
-  good.
+- **Routes.**
+  - Every direct pool, and every path through one token both sides trade against (SOL, wBORDR, anything). The best
+    output wins.
+  - A two-leg route is one transaction when it fits in 1,232 bytes; otherwise one per leg, signed as a batch. The
+    second leg spends what the first is sure to deliver.
+- **Legs**, all built here with the SDK:
+  - a launch's curve or pool, through its launch keys (kit, custom hook and SOL cut resolved);
+  - any other pool, with each side's token hook and its pool hook resolved;
+  - a pool quoted in bridged SOL, which wraps the input and unwraps what it delivers.
+- **Quotes.**
+  - Constant product on each pool's books, with that side's fees. For a launch: its whole buy or sell fee plus its
+    hook's cut from the Workshop reading. For a pool: its LP and protocol fee.
+  - Slippage sets each leg's minimum, which also protects a trade through a hook that publishes no reading.
+- **The router fee** (optional, `B2_FEE_WALLET`).
+  - The leg that moves SOL goes through Bordrless's router: a buy pays from its input, a sell from the SOL it
+    delivers.
+  - Native pools pay it in SOL. Pools quoted in bridged SOL pay it in bridged SOL, once the fee wallet has a bridged
+    SOL holding.
+- **Fallback.** If a single launch leg can't be built here, Bordrless's own `/api/swap/prepare` builds it.
 
-The first B² coin is
-[`4iWwcHf9…bps6H7J`](https://solscan.io/token/4iWwcHf9tH6J6UjRgG9rXosXVxNdcKUFuqh1rbps6H7J).
+`packages/core/scripts/simulate-routes.ts` builds real routes and simulates them on mainnet for wallets that can
+afford them: launches with every kind of rule (a kit, a burn, a game hook, a custom hook, B²'s pair), plain pools,
+pools quoted in bridged SOL, another program's curve, and a token-to-token route through SOL, with and without the
+router fee.
 
 ## The app
 
-| Machine | Scanner |
+| Scanner | Token |
 | --- | --- |
-| <img src="docs/media/machine.png" alt="Machine view" /> | <img src="docs/media/scanner.png" alt="Scanner" /> |
-| **Swap** | **Connect** |
-| <img src="docs/media/swap.png" alt="Swap" /> | <img src="docs/media/connect.png" alt="Wallet connect" /> |
+| <img src="docs/media/scanner.png" alt="Scanner" /> | <img src="docs/media/token.png" alt="A token page with its chart, trades and a trade box" /> |
+| **Machine** | **Connect** |
+| <img src="docs/media/machine.png" alt="Machine view" /> | <img src="docs/media/connect.png" alt="Wallet connect" /> |
 
 - **Swap.** Any Bordrless token to any other, routed through the best direct pool or one hop. Quotes and
-  transactions are built here with the Bordrless SDK, and the wallet signs.
+  transactions are built here with the Bordrless SDK, and the wallet signs. Every page that shows a token can trade
+  it.
 - **Scanner.** Every token and pool on the Bordrless DEX: price, market cap, liquidity, 24 h volume, holders, curve
   progress. Filter by curve, graduated, B², custom hooks or bridged tokens.
+- **Token pages.** A chart, the latest trades, the coin's fees, hook and pools, and a trade box beside them.
 - **Machine.** Any coin's rules drawn as a machine: its last 40 trades on the chart, and every trade's money running
   to the hook, the creator fee, holders, the burn and its companion. B² coins add the pot, its floor and the held
   coin. Your own trades join the drawing as soon as they confirm. On a phone it reflows into a tall layout.
@@ -151,7 +154,7 @@ npm run dev               # indexer on :8787, web on http://localhost:5173
 | --- | --- | --- | --- |
 | `B2_RPC` | yes | | Solana mainnet RPC URL. It must serve `getProgramAccounts` and version 1 transactions. |
 | `PORT` | | `8787` | The indexer's port (server mode). |
-| `B2_FEE_WALLET` | | | Turns on the router's integrator fee, paid to this wallet. It must hold rent (about 0.001 SOL). |
+| `B2_FEE_WALLET` | | | Turns on the router's integrator fee, paid to this wallet. It must hold rent (about 0.001 SOL); pools quoted in bridged SOL carry it once the wallet has a bridged SOL holding. |
 | `B2_FEE_BPS` | | `50` | The integrator fee, 1 to 100 basis points. Bordrless keeps a fifth. |
 | `B2_INDEXER` | | `http://localhost:8787` | Where the Vite dev server proxies `/api` and `/rpc`. |
 
@@ -189,33 +192,32 @@ and `/rpc` routed to it.
 - **From bordrless.app/api** (public, no key): images, holders, 24 h volume and change, the rules, candles and
   trades.
 
-## Swaps
+## The B² pair
 
-Any token to any token (`packages/core/src/route.ts`, served as `/api/route/quote` and `/api/route/prepare`):
+B² is the Workshop pair we built and Bordrless deployed. The swap trades its coins like any other, showing the hook's
+cut in the quote, and the machine view draws its pot, floor and held coin.
 
-- **Routes.**
-  - Every direct pool, and every path through one token both sides trade against (SOL, wBORDR, anything). The best
-    output wins.
-  - A two-leg route is one transaction when it fits in 1,232 bytes; otherwise one per leg, signed as a batch. The
-    second leg spends what the first is sure to deliver.
-- **Legs**, all built here with the SDK:
-  - a launch's curve or pool, through its launch keys (kit, custom hook and SOL cut resolved);
-  - any other pool, with each side's token hook and its pool hook resolved;
-  - a pool quoted in bridged SOL, which wraps the input and unwraps what it delivers.
-- **Quotes.**
-  - Constant product on each pool's books, with that side's fees. For a launch: its whole buy or sell fee plus its
-    hook's cut from the Workshop reading. For a pool: its LP and protocol fee.
-  - Slippage sets each leg's minimum, which also protects a trade through a hook that publishes no reading.
-- **The router fee** (optional, `B2_FEE_WALLET`).
-  - The leg that moves SOL goes through Bordrless's router: a buy pays from its input, a sell from the SOL it
-    delivers.
-  - Native pools pay it in SOL. Pools quoted in bridged SOL pay it in bridged SOL, once the fee wallet has a bridged
-    SOL holding.
-- **Fallback.** If a single launch leg can't be built here, Bordrless's own `/api/swap/prepare` builds it.
+```mermaid
+flowchart LR
+    T[Every curve trade] -->|1% SOL cut| H[B² hook]
+    H --> P[(Pot)]
+    P -->|every 60 s, under the +3% guard| B[Companion buys the coin]
+    B --> C[(Held coin)]
+    D{Price over 15% under<br/>its 6 h reference?} -.->|buys pay 0%, sells 3%| H
+    P & C -->|at graduation| G[coin/SOL and coin/wBORDR<br/>LP locked in the launch]
+```
 
-`packages/core/scripts/simulate-routes.ts` builds real routes and simulates them on mainnet.
+- **The cut.** The hook takes 1% of every curve trade, in SOL, into the companion's pot.
+- **The buy.** Every 60 seconds the companion steps. Before graduation it buys and holds the coin, dips first, and
+  only while the price is under its one-hour reference plus 3%, so it never chases a pump. At most half the pot
+  goes on buys.
+- **Dip Buy.** When the price falls more than 15% under its six-hour reference, buyers pay no hook fee and sellers
+  pay 3%, which leans the curve toward recovery.
+- **Graduation.** The pot and the held coin seed coin/SOL and coin/wBORDR, with the LP locked in the launch for
+  good.
 
-## The program
+The first B² coin is
+[`4iWwcHf9…bps6H7J`](https://solscan.io/token/4iWwcHf9tH6J6UjRgG9rXosXVxNdcKUFuqh1rbps6H7J).
 
 | | Mainnet |
 | --- | --- |
@@ -228,11 +230,11 @@ build under. Build, test and the Workshop's source rules: [`programs/b2/README.m
 ## Project layout
 
 ```
-programs/b2       the Workshop pair (Rust, Anchor 1.2): hook/, script/, submission/, LiteSVM tests/, fixtures/
-packages/core     chain reads: pools, mints, launches, bridged tokens, B²'s state, routing
+packages/core     routing and chain reads: route.ts (quotes, legs, the router fee), pools, mints, launches, B²'s state
 apps/indexer      app.ts (the API and the RPC proxy), main.ts (server), vercel.ts (function)
 apps/web          Swap, Scanner, token pages, Machine view, wallet connect (React, Vite)
 scripts           dev.mjs (both apps), vercel-build.mjs, fix-bordrless-packages.mjs
+programs/b2       the B² pair (Rust, Anchor 1.2): hook/, script/, submission/, LiteSVM tests/, fixtures/
 docs/media        the screenshots in this README
 ```
 
@@ -247,7 +249,7 @@ docs/media        the screenshots in this README
     that scans.
 - **Trust.**
   - Bordrless programs are upgradeable by their team.
-  - The pair's numbers (the cut, the guard, Dip Buy) are fixed in its deployed code.
+  - The B² pair's numbers (the cut, the guard, Dip Buy) are fixed in its deployed code.
   - Nothing here is financial advice.
 
 To report a vulnerability, see [SECURITY.md](SECURITY.md).

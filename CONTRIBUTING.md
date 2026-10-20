@@ -10,7 +10,10 @@ npm install               # Node 22+
 npm run dev               # indexer on :8787, web on http://localhost:5173
 ```
 
-The program (`programs/b2`) has its own toolchain (Rust, Anchor 1.2, Agave's `cargo build-sbf`); see
+Swap changes can be checked against mainnet without signing: `B2_RPC=<url> npx tsx packages/core/scripts/simulate-routes.ts`
+simulates real routes for wallets that can afford them.
+
+The B² pair (`programs/b2`) has its own toolchain (Rust, Anchor 1.2, Agave's `cargo build-sbf`); see
 [`programs/b2/README.md`](programs/b2/README.md).
 
 ## Before you open a pull request
