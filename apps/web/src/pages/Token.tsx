@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom';
+import { Loading, Retry, ToScanner } from '../components/Retry';
 import { usePoll, type Candle, type Pool, type Token, type Trade } from '../api';
 import { age, compact, pct, price, short, sol, usd } from '../format';
 import { Chart } from '../components/Chart';
@@ -11,9 +12,14 @@ type TokenData = { solUsd: number | null; token: Token; pools: Pool[]; candles: 
 
 export function TokenPage() {
   const { mint } = useParams();
-  const { data, error } = usePoll<TokenData>(mint ? `/api/token/${mint}` : null, 15_000);
-  if (error && !data) return <div className="note err">{error}</div>;
-  if (!data) return <div className="note">Loading…</div>;
+  const { data, error, retryable, loading, refresh } = usePoll<TokenData>(mint ? `/api/token/${mint}` : null, 15_000);
+  if (error && !data)
+    return (
+      <Retry title={retryable ? "This token didn't load" : 'No such token here'} message={error} onRetry={refresh} busy={loading} retryable={retryable}>
+        <ToScanner />
+      </Retry>
+    );
+  if (!data) return <Loading text="Reading the token from chain…" />;
   const { token: t, solUsd, pools, candles, trades } = data;
   const usdOf = (s: number | null) => (s !== null && solUsd ? s * solUsd : null);
 

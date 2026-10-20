@@ -4,6 +4,7 @@ import { usePoll, type MachineData, type Trade } from '../api';
 import { age, compact, short, sol } from '../format';
 import { SwapCard, type Swapped } from '../components/SwapCard';
 import { TokenIcon } from '../components/TokenIcon';
+import { Loading, Retry, ToScanner } from '../components/Retry';
 
 // The machine view, live, for any token: its latest trades on the chart, and every trade's money
 // running to where the coin's rules send it (the hook, the creator fee, holders, the burn, its
@@ -295,7 +296,7 @@ function Tag({ x, y, text, anchor = 'start', color, fs }: { x: number; y: number
 
 export function MachinePage() {
   const { mint } = useParams();
-  const { data, error, refresh } = usePoll<MachineData>(mint ? `/api/machine/${mint}` : null, 5_000);
+  const { data, error, retryable, loading, refresh } = usePoll<MachineData>(mint ? `/api/machine/${mint}` : null, 5_000);
   const [particles, setParticles] = useState<Particle[]>([]);
   const [now, setNow] = useState(performance.now());
   const [mine, setMine] = useState<Ev[]>([]);
@@ -505,8 +506,13 @@ export function MachinePage() {
     setTimeout(refresh, 2500);
   };
 
-  if (error && !data) return <div className="note err">{error}</div>;
-  if (!data || !t) return <div className="note">Reading the machine from chain…</div>;
+  if (error && !data)
+    return (
+      <Retry title={retryable ? "The machine didn't load" : 'No machine for this address'} message={error} onRetry={refresh} busy={loading} retryable={retryable}>
+        <ToScanner />
+      </Retry>
+    );
+  if (!data || !t) return <Loading text="Reading the machine from chain…" />;
 
   const graduated = (lm?.launch.status ?? 'graduated') === 'graduated';
   const progress = lm?.launch.progress ?? 1;
@@ -564,7 +570,7 @@ export function MachinePage() {
           </h1>
           <div className="note" style={{ paddingLeft: 0 }}>
             <span className="pulse" />
-            Live from chain · {t.symbol} · {lm ? (graduated ? 'graduated' : `curve ${(progress * 100).toFixed(1)}%`) : 'pool'}
+            {error ? 'Reconnecting to chain… showing the last reading' : 'Live from chain'} · {t.symbol} · {lm ? (graduated ? 'graduated' : `curve ${(progress * 100).toFixed(1)}%`) : 'pool'}
             {b2?.script ? ` · ${b2.script.steps} B² steps, last ${age(b2.script.lastStepAt)} ago (${b2.script.lastAction})` : ''}
           </div>
         </div>

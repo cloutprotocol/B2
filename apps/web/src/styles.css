@@ -238,3 +238,18 @@ table.grid tr.row:hover td { background: var(--faint); cursor: pointer; }
 @keyframes wk-turn { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .wk-backdrop, .wk-card, .wk-menu { animation: none; } .wk-spin { animation-duration: 2s; } }
 
+
+/* ---- Page states (components/Retry.tsx) --------------------------------------------------------- */
+.state { min-height: 52vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 32px 16px; text-align: center; }
+.state h2 { margin: 6px 0 0; font: 700 22px var(--display); letter-spacing: -0.01em; }
+.state p { margin: 0; max-width: 420px; color: var(--muted); font-size: 14.5px; line-height: 1.5; }
+.state small { margin-top: 4px; color: var(--soft); font-size: 12px; }
+.state-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; color: var(--down); background: var(--down-soft); border: 1px solid rgba(255, 138, 122, 0.25); }
+.state-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
+.state-retry { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 20px; border-radius: 999px; border: 0; background: var(--ink); color: #0b0c0e; font: 600 14px var(--sans); cursor: pointer; transition: background 0.15s ease, box-shadow 0.2s ease; }
+.state-retry:hover:not(:disabled) { background: #fff; box-shadow: 0 0 0 4px rgba(59, 85, 255, 0.18); }
+.state-retry:disabled { opacity: 0.75; cursor: progress; }
+.state-link { display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--ink-2); text-decoration: none; font: 500 14px var(--sans); }
+.state-link:hover { color: var(--ink); background: var(--raise); }
+.state-spin { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid rgba(170, 182, 255, 0.22); border-top-color: #aab6ff; animation: wk-turn 0.8s linear infinite; }
+.state-spin.is-sm { width: 14px; height: 14px; border-width: 2px; border-color: rgba(11, 12, 14, 0.25); border-top-color: #0b0c0e; }

@@ -154,12 +154,18 @@ const machines = new Map<string, { at: number; m: LaunchMachine | null }>();
 const b2Machines = new Map<string, { at: number; m: Machine | null }>();
 const stepCache = new Map<string, { at: number; m: Step[] }>();
 
+/** A read cached for `ms`; when a fresh read fails, the last good one is served instead (and failing with none). */
 async function cached<T>(map: Map<string, { at: number; m: T }>, key: string, ms: number, read: () => Promise<T>): Promise<T> {
   const hit = map.get(key);
   if (hit && Date.now() - hit.at < ms) return hit.m;
-  const m = await read();
-  map.set(key, { at: Date.now(), m });
-  return m;
+  try {
+    const m = await read();
+    map.set(key, { at: Date.now(), m });
+    return m;
+  } catch (e) {
+    if (hit) return hit.m;
+    throw e;
+  }
 }
 
 /** Any token's machine: the launch's chain state and its rules in words; B² coins add the B² reading and its steps. */
@@ -172,7 +178,7 @@ async function machineOf(mint: string) {
   if (token?.b2) {
     const [machine, steps] = await Promise.all([
       cached(b2Machines, mint, 4_000, () => readMachine(conn, key)),
-      cached(stepCache, mint, 15_000, () => fetchSteps(RPC!, key, 30)),
+      cached(stepCache, mint, 15_000, () => fetchSteps(RPC!, key, 30)).catch((): Step[] => []),
     ]);
     b2 = { machine, steps };
   }
@@ -218,8 +224,13 @@ const RPC_METHODS = new Set([
   'getVersion',
 ]);
 
-const json = (res: ServerResponse, status: number, body: unknown) => {
-  res.writeHead(status, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'cache-control': 'no-store' });
+/**
+ * A JSON answer. `edge` lets Vercel's CDN serve it for that many seconds (and stale for 30 more while it
+ * refreshes), so most visits never reach the function or the RPC; everything else is never cached.
+ */
+const json = (res: ServerResponse, status: number, body: unknown, edge = 0) => {
+  const cache = edge && status === 200 ? `public, max-age=0, s-maxage=${edge}, stale-while-revalidate=30` : 'no-store';
+  res.writeHead(status, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'cache-control': cache, ...(status === 503 ? { 'retry-after': '3' } : {}) });
   res.end(JSON.stringify(body, (_k, v) => (typeof v === 'bigint' ? v.toString() : v)));
 };
 
@@ -265,6 +276,8 @@ async function route(req: IncomingMessage, res: ServerResponse) {
   }
 
   if (parts[0] !== 'api') return json(res, 404, { error: 'not found' });
+  // every answer below reads the market: until the first scan lands (a cold start, a busy RPC), say so
+  if (!market && parts[1] !== 'balance') return json(res, 503, { error: 'Loading the market from Solana. One moment.', retry: true });
 
   switch (parts[1]) {
     case 'overview': {
@@ -278,34 +291,34 @@ async function route(req: IncomingMessage, res: ServerResponse) {
         volume24hUsd: [...poolExtras.values()].reduce((a, p) => a + (p.volume24hUsd ?? 0), 0),
         graduated: ts.filter((t) => t.launch?.status === 'graduated').length,
         onCurve: ts.filter((t) => t.launch?.status === 'curve').length,
-      });
+      }, 5);
     }
     case 'tokens':
-      return json(res, 200, { at: market?.at ?? null, solUsd, tokens: tokens() });
+      return json(res, 200, { at: market?.at ?? null, solUsd, tokens: tokens() }, 5);
     case 'pools':
       return json(res, 200, {
         at: market?.at ?? null,
         solUsd,
         pools: (market?.pools ?? []).map((p) => ({ ...p, volume24hUsd: poolExtras.get(p.address)?.volume24hUsd ?? null, ownVolume24hQuote: ownVolume24h(p.address) })),
-      });
+      }, 5);
     case 'token': {
       const mint = parts[2];
-      if (!isKey(mint)) return json(res, 400, { error: 'bad mint' });
+      if (!isKey(mint)) return json(res, 400, { error: "That isn't a token address." });
       const t = tokens().find((x) => x.mint === mint);
-      if (!t) return json(res, 404, { error: 'not on the Bordrless DEX' });
+      if (!t) return json(res, 404, { error: "This token isn't on the Bordrless DEX." });
       const [candles, trades] = await Promise.all([
         t.launch ? bordrless.candles(mint).catch(() => ({ candles: [] })) : { candles: [] },
         t.launch ? bordrless.trades(mint).catch(() => ({ trades: [] })) : { trades: [] },
       ]);
-      return json(res, 200, { solUsd, token: t, pools: market!.pools.filter((p) => t.pools.includes(p.address)), ...candles, ...trades });
+      return json(res, 200, { solUsd, token: t, pools: market!.pools.filter((p) => t.pools.includes(p.address)), ...candles, ...trades }, 5);
     }
     case 'machine': {
       const mint = parts[2];
-      if (!isKey(mint)) return json(res, 400, { error: 'bad mint' });
+      if (!isKey(mint)) return json(res, 400, { error: "That isn't a token address." });
       const m = await machineOf(mint);
-      if (!m.token) return json(res, 404, { error: 'not on the Bordrless DEX' });
+      if (!m.token) return json(res, 404, { error: "This token isn't on the Bordrless DEX." });
       const trades = m.token.launch ? await bordrless.trades(mint).catch(() => ({ trades: [] })) : { trades: [] };
-      return json(res, 200, { solUsd, ...m, ...trades });
+      return json(res, 200, { solUsd, ...m, ...trades }, 3);
     }
     case 'balance': {
       // A wallet's SOL and its holdings of the mints asked for, in base units.
@@ -357,6 +370,12 @@ export function handle(req: IncomingMessage, res: ServerResponse) {
   if (configError) return json(res, 500, { error: configError });
   return route(req, res).catch((e) => {
     console.error(req.url, e);
-    if (!res.headersSent) json(res, 500, { error: (e as Error).message });
+    if (res.headersSent) return;
+    const m = String((e as Error)?.message ?? e);
+    // a busy or unreachable node: worth trying again in a moment
+    if (/429|too many|rate limit|unexpected end of json|not valid json|fetch failed|timed? ?out|econnreset|socket hang up|rpc (5\d\d|unreachable)/i.test(m)) {
+      return json(res, 503, { error: 'The Solana RPC is busy right now. Trying again in a moment.', retry: true });
+    }
+    json(res, 500, { error: 'Something went wrong reading the chain. Try again in a moment.', retry: true, detail: m.slice(0, 200) });
   });
 }

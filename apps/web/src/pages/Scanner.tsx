@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Loading, Retry } from '../components/Retry';
 import { usePoll, type Pool, type Token } from '../api';
 import { age, compact, pct, price, short, sol, usd } from '../format';
 import { useMarket } from '../market';
@@ -218,7 +219,7 @@ function PoolsTable({ tokens }: { tokens: Token[] }) {
 }
 
 export function ScannerPage() {
-  const { tokens, solUsd, overview, error } = useMarket();
+  const { tokens, solUsd, overview, error, retryable, loading, retry } = useMarket();
   const [filter, setFilter] = useState<Filter>('all');
   const [view, setView] = useState<'tokens' | 'pools'>('tokens');
   const [q, setQ] = useState('');
@@ -298,8 +299,17 @@ export function ScannerPage() {
           </>
         ) : null}
       </div>
-      {error && !tokens.length ? <div className="note err">The indexer isn't answering: {error}</div> : null}
-      {view === 'tokens' ? <TokensTable rows={rows} solUsd={solUsd} /> : <PoolsTable tokens={tokens} />}
+      {!tokens.length ? (
+        error ? (
+          <Retry title="The market didn't load" message={error} onRetry={retry} busy={loading} retryable={retryable} />
+        ) : (
+          <Loading text="Reading every Bordrless pool from chain…" />
+        )
+      ) : view === 'tokens' ? (
+        <TokensTable rows={rows} solUsd={solUsd} />
+      ) : (
+        <PoolsTable tokens={tokens} />
+      )}
     </div>
   );
 }

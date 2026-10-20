@@ -149,48 +149,94 @@ export type MachineData = {
 
 export type Step = { signature: string; slot: number; at: number; action: string; sol: number; amount: number; pot: number };
 
-export async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(path);
-  const body = await res.json();
-  if (!res.ok) throw new Error(body?.error ?? `${res.status}`);
+/** An API failure in words, and whether trying again could help (a busy RPC, a cold server, the network). */
+export class ApiError extends Error {
+  constructor(message: string, public status: number, public retry: boolean, public body: unknown = null) {
+    super(message);
+  }
+}
+
+/** The body as JSON, `null` when empty, `undefined` when it isn't JSON (a platform error page, a proxy). */
+async function readBody(res: Response): Promise<unknown> {
+  const text = await res.text().catch(() => '');
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
+function failure(status: number, body: unknown): ApiError {
+  const b = body && typeof body === 'object' ? (body as { error?: unknown; retry?: unknown }) : null;
+  if (typeof b?.error === 'string') return new ApiError(b.error, status, b.retry === true || status === 429 || status >= 500, body);
+  if (status === 429) return new ApiError('Too many requests right now. Trying again in a moment.', status, true, body);
+  if (status >= 500 || status === 0) return new ApiError('The B² server hit a snag reading the chain. Trying again in a moment.', status, true, body);
+  return new ApiError(`The server answered unexpectedly (${status}).`, status, false, body);
+}
+
+async function call<T>(path: string, init?: RequestInit): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(path, init);
+  } catch {
+    throw new ApiError("Can't reach the B² server. Check your connection.", 0, true);
+  }
+  const body = await readBody(res);
+  if (!res.ok || body === undefined) throw failure(res.ok ? 502 : res.status, body ?? null);
   return body as T;
 }
 
-export async function postJson<T>(path: string, data: unknown): Promise<T> {
-  const res = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
-  const body = await res.json();
-  if (!res.ok) throw Object.assign(new Error(body?.error ?? `${res.status}`), { body });
-  return body as T;
-}
+export const getJson = <T,>(path: string) => call<T>(path);
+export const postJson = <T,>(path: string, data: unknown) =>
+  call<T>(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
 
-/** Fetches `path` now and every `ms`, keeping the last good answer through errors. */
-export function usePoll<T>(path: string | null, ms: number): { data: T | null; error: string | null; refresh: () => void } {
+/**
+ * Fetches `path` now and every `ms`, keeping the last good answer through errors. With no answer yet, a
+ * failure is tried again sooner (2 s, 4 s, 8 s, then every `ms`). `loading` is true while a fetch runs.
+ */
+export function usePoll<T>(path: string | null, ms: number): { data: T | null; error: string | null; retryable: boolean; loading: boolean; refresh: () => void } {
   const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [loading, setLoading] = useState(false);
   const [nonce, setNonce] = useState(0);
   const live = useRef(path);
+  const has = useRef(false);
   useEffect(() => {
-    if (live.current !== path) setData(null);
+    if (live.current !== path) {
+      setData(null);
+      has.current = false;
+    }
     live.current = path;
     if (!path) return;
     let stop = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let fails = 0;
     const tick = async () => {
+      setLoading(true);
       try {
         const d = await getJson<T>(path);
-        if (!stop && live.current === path) {
-          setData(d);
-          setError(null);
-        }
+        if (stop || live.current !== path) return;
+        setData(d);
+        setError(null);
+        has.current = true;
+        fails = 0;
       } catch (e) {
-        if (!stop) setError((e as Error).message);
+        if (stop) return;
+        setError(e instanceof ApiError ? e : new ApiError((e as Error).message, 0, true));
+        fails++;
+      } finally {
+        if (!stop) {
+          setLoading(false);
+          timer = setTimeout(tick, !has.current && fails ? Math.min(ms, 2000 * 2 ** (fails - 1)) : ms);
+        }
       }
     };
     tick();
-    const id = setInterval(tick, ms);
     return () => {
       stop = true;
-      clearInterval(id);
+      clearTimeout(timer);
     };
   }, [path, ms, nonce]);
-  return { data, error, refresh: () => setNonce((n) => n + 1) };
+  return { data, error: error?.message ?? null, retryable: error?.retry ?? true, loading, refresh: () => setNonce((n) => n + 1) };
 }

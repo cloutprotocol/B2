@@ -304,30 +304,66 @@ export function steppedOf(logs: string[]): Omit<Step, 'signature' | 'slot' | 'at
   return out;
 }
 
-/** The latest steps of a B² coin, newest first: every transaction that wrote its script state, read for `Stepped`. */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * One JSON-RPC call, retried twice (0.4 s, then 0.8 s) when the node is busy: a 429, a 5xx, or a body
+ * that isn't JSON (a rate-limited node can answer with an empty one).
+ */
+async function rpc(rpcUrl: string, method: string, params: unknown[], tries = 3): Promise<any> {
+  for (let i = 0; ; i++) {
+    let status = 0;
+    let body: { result?: any; error?: { message: string } } | null = null;
+    try {
+      const res = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'user-agent': 'b2-indexer' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+      });
+      status = res.status;
+      const text = await res.text();
+      try {
+        body = text ? JSON.parse(text) : null;
+      } catch {
+        body = null;
+      }
+      if (res.ok && body && !body.error) return body.result;
+    } catch {
+      // the connection itself failed: retried like a busy node
+    }
+    const busy = status === 0 || status === 429 || status >= 500 || !body;
+    if (!busy || i >= tries - 1) throw new Error(body?.error ? `${method}: ${body.error.message}` : `${method}: RPC ${status || 'unreachable'}${status === 429 ? ' (rate limited)' : ''}`);
+    await sleep(400 * 2 ** i);
+  }
+}
+
+/** The steps in each transaction, by signature: a confirmed transaction never changes, so it's read once. */
+const txSteps = new Map<string, Omit<Step, 'signature' | 'slot' | 'at'>[]>();
+
+/**
+ * The latest steps of a B² coin, newest first: every transaction that wrote its script state, read for
+ * `Stepped`. Only transactions not seen before are fetched, four at a time; one that can't be read is
+ * left out of this answer and tried again on the next.
+ */
 export async function fetchSteps(rpcUrl: string, mintKey: PublicKey, limit = 25): Promise<Step[]> {
-  const call = async (method: string, params: unknown[]) => {
-    const res = await fetch(rpcUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'user-agent': 'b2-indexer' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-    });
-    const body = (await res.json()) as { result?: any; error?: { message: string } };
-    if (body.error) throw new Error(`${method}: ${body.error.message}`);
-    return body.result;
-  };
-  const sigs: { signature: string; slot: number; blockTime: number | null; err: unknown }[] = await call('getSignaturesForAddress', [
+  const sigs: { signature: string; slot: number; blockTime: number | null; err: unknown }[] = await rpc(rpcUrl, 'getSignaturesForAddress', [
     scriptStateAddress(mintKey).toBase58(),
     { limit },
   ]);
-  const out: Step[] = [];
-  await Promise.all(
-    sigs
-      .filter((s) => !s.err)
-      .map(async (s) => {
-        const tx = await call('getTransaction', [s.signature, { encoding: 'json', maxSupportedTransactionVersion: 1, commitment: 'confirmed' }]);
-        for (const e of steppedOf(tx?.meta?.logMessages ?? [])) out.push({ signature: s.signature, slot: s.slot, at: s.blockTime ?? 0, ...e });
+  const todo = sigs.filter((s) => !s.err && !txSteps.has(s.signature));
+  for (let i = 0; i < todo.length; i += 4) {
+    await Promise.all(
+      todo.slice(i, i + 4).map(async (s) => {
+        try {
+          const tx = await rpc(rpcUrl, 'getTransaction', [s.signature, { encoding: 'json', maxSupportedTransactionVersion: 1, commitment: 'confirmed' }]);
+          if (tx) txSteps.set(s.signature, steppedOf(tx?.meta?.logMessages ?? []));
+        } catch {
+          // read on the next call
+        }
       }),
-  );
+    );
+  }
+  const out: Step[] = [];
+  for (const s of sigs) for (const e of txSteps.get(s.signature) ?? []) out.push({ signature: s.signature, slot: s.slot, at: s.blockTime ?? 0, ...e });
   return out.sort((a, b) => b.slot - a.slot);
 }
