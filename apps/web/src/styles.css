@@ -345,3 +345,9 @@ table.grid tr.row:hover td { background: var(--faint); cursor: pointer; }
 .mover:hover, .mover:focus-visible { background: var(--faint); outline: none; }
 .mover-swap { flex: none; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line-2); background: transparent; color: var(--ink-2); font: 500 12px var(--sans); cursor: pointer; }
 .mover-swap:hover { background: var(--ink); color: #0b0c0e; border-color: var(--ink); }
+/* the narrowest phones (360 px and under): a little less padding so the token table fits */
+@media (max-width: 380px) {
+  table.grid th, table.grid td { padding: 9px 6px; }
+  table.grid.tokens .tok .n { max-width: 30vw; }
+  .hstat .v { font-size: 19px; }
+}
